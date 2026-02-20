@@ -7,7 +7,8 @@ import { apiError, apiSuccess } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // PUT /api/announcements/[id] — Admin: edit announcement
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') return apiError('Forbidden', 403);
@@ -15,10 +16,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const body = await req.json();
     await connectDB();
 
-    const announcement = await Announcement.findByIdAndUpdate(params.id, body, { new: true });
+    const announcement = await Announcement.findByIdAndUpdate(id, body, { new: true });
     if (!announcement) return apiError('Announcement not found', 404);
 
-    audit({ actorId: session.user.id, action: 'UPDATE_ANNOUNCEMENT', resource: 'Announcement', resourceId: params.id });
+    audit({ actorId: session.user.id, action: 'UPDATE_ANNOUNCEMENT', resource: 'Announcement', resourceId: id });
     return apiSuccess(announcement, 'Announcement updated successfully');
   } catch (err) {
     console.error('[PUT /api/announcements/[id]]', err);
@@ -27,16 +28,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/announcements/[id] — Admin only
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') return apiError('Forbidden', 403);
 
     await connectDB();
-    const announcement = await Announcement.findByIdAndDelete(params.id);
+    const announcement = await Announcement.findByIdAndDelete(id);
     if (!announcement) return apiError('Announcement not found', 404);
 
-    audit({ actorId: session.user.id, action: 'DELETE_ANNOUNCEMENT', resource: 'Announcement', resourceId: params.id });
+    audit({ actorId: session.user.id, action: 'DELETE_ANNOUNCEMENT', resource: 'Announcement', resourceId: id });
     return apiSuccess(null, 'Announcement deleted successfully');
   } catch (err) {
     console.error('[DELETE /api/announcements/[id]]', err);
