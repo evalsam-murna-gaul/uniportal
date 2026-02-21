@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { GRADE_TYPE } from '@/constants/roles';
+import { toast } from 'sonner';
+import { GRADE_TYPE, GradeType } from '@/constants/roles';
 
 interface Student {
   _id: string;
@@ -17,11 +18,9 @@ interface GradeRow {
 export default function GradeUploader({ courseId, students }: { courseId: string; students: Student[] }) {
   const [assignment, setAssignment] = useState('');
   const [maxScore, setMaxScore] = useState('100');
-  const [type, setType] = useState(GRADE_TYPE.ASSIGNMENT);
+  const [type, setType] = useState<GradeType>(GRADE_TYPE.ASSIGNMENT);
   const [rows, setRows] = useState<GradeRow[]>(students.map(s => ({ studentId: s._id, score: '' })));
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ success: number; failed: number } | null>(null);
-  const [error, setError] = useState('');
 
   function updateScore(studentId: string, score: string) {
     setRows(prev => prev.map(r => r.studentId === studentId ? { ...r, score } : r));
@@ -33,16 +32,13 @@ export default function GradeUploader({ courseId, students }: { courseId: string
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!assignment.trim()) { setError('Assignment name is required'); return; }
-    if (!maxScore || Number(maxScore) < 1) { setError('Max score must be at least 1'); return; }
+    if (!assignment.trim()) { toast.error('Assignment name is required'); return; }
+    if (!maxScore || Number(maxScore) < 1) { toast.error('Max score must be at least 1'); return; }
 
     const filledRows = rows.filter(r => r.score !== '');
-    if (filledRows.length === 0) { setError('Please enter at least one score'); return; }
+    if (filledRows.length === 0) { toast.error('Please enter at least one score'); return; }
 
-    setError('');
     setSubmitting(true);
-
-    // Submit grades one by one (could be batched in a real API)
     let success = 0;
     let failed = 0;
 
@@ -50,27 +46,23 @@ export default function GradeUploader({ courseId, students }: { courseId: string
       filledRows.map(async row => {
         const score = Number(row.score);
         if (isNaN(score) || score < 0 || score > Number(maxScore)) { failed++; return; }
-
         const res = await fetch('/api/grades', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            student: row.studentId,
-            course: courseId,
-            assignment,
-            score,
-            maxScore: Number(maxScore),
-            type,
-          }),
+          body: JSON.stringify({ student: row.studentId, course: courseId, assignment, score, maxScore: Number(maxScore), type }),
         });
-
         if (res.ok) success++; else failed++;
       })
     );
 
     setSubmitting(false);
-    setResult({ success, failed });
-    // Reset scores after submit
+
+    if (failed === 0) {
+      toast.success(`${success} grade${success !== 1 ? 's' : ''} submitted successfully`);
+    } else {
+      toast.warning(`${success} submitted, ${failed} failed — check scores are within range`);
+    }
+
     setRows(students.map(s => ({ studentId: s._id, score: '' })));
     setAssignment('');
   }
@@ -90,19 +82,6 @@ export default function GradeUploader({ courseId, students }: { courseId: string
         <h2 className="font-semibold text-gray-800">Upload Grades</h2>
         <p className="text-xs text-gray-400 mt-0.5">Enter scores for each student for a specific assignment</p>
       </div>
-
-      {result && (
-        <div className={`mx-5 mt-4 rounded-lg px-4 py-3 text-sm ${result.failed === 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'}`}>
-          {result.success} grade{result.success !== 1 ? 's' : ''} submitted successfully
-          {result.failed > 0 && ` • ${result.failed} failed`}
-        </div>
-      )}
-
-      {error && (
-        <div className="mx-5 mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit}>
         {/* Assignment meta */}
@@ -128,7 +107,7 @@ export default function GradeUploader({ courseId, students }: { courseId: string
             <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
             <select
               value={type}
-              onChange={e => setType(e.target.value)}
+              onChange={e => setType(e.target.value as GradeType)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {Object.values(GRADE_TYPE).map(t => (

@@ -5,11 +5,12 @@ import { connectDB } from '@/lib/db';
 import Grade from '@/models/Grade';
 import Course from '@/models/Course';
 import { updateGradeSchema } from '@/lib/validations';
-import { apiError, apiSuccess } from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // PUT /api/grades/[id] — Faculty: update a grade they submitted
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session || !['faculty', 'admin'].includes(session.user.role)) {
@@ -18,11 +19,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const body = await req.json();
     const parsed = updateGradeSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.errors[0].message, 400);
+    if (!parsed.success) return apiError(zodMessage(parsed.error), 400);
 
     await connectDB();
 
-    const grade = await Grade.findById(params.id).populate('course');
+    const grade = await Grade.findById(id).populate('course');
     if (!grade) return apiError('Grade not found', 404);
 
     // Faculty can only edit grades for their own courses
@@ -49,7 +50,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     grade.gradedBy = session.user.id as unknown as typeof grade.gradedBy;
     await grade.save();
 
-    audit({ actorId: session.user.id, action: 'UPDATE_GRADE', resource: 'Grade', resourceId: params.id, metadata: { score: parsed.data.score } });
+    audit({ actorId: session.user.id, action: 'UPDATE_GRADE', resource: 'Grade', resourceId: id, metadata: { score: parsed.data.score } });
 
     return apiSuccess(grade, 'Grade updated successfully');
   } catch (err) {
@@ -59,16 +60,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 }
 
 // DELETE /api/grades/[id] — Admin only
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') return apiError('Forbidden', 403);
 
     await connectDB();
-    const grade = await Grade.findByIdAndDelete(params.id);
+    const grade = await Grade.findByIdAndDelete(id);
     if (!grade) return apiError('Grade not found', 404);
 
-    audit({ actorId: session.user.id, action: 'DELETE_GRADE', resource: 'Grade', resourceId: params.id });
+    audit({ actorId: session.user.id, action: 'DELETE_GRADE', resource: 'Grade', resourceId: id });
     return apiSuccess(null, 'Grade deleted successfully');
   } catch (err) {
     console.error('[DELETE /api/grades/[id]]', err);

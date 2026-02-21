@@ -5,7 +5,7 @@ import { connectDB } from '@/lib/db';
 import Course from '@/models/Course';
 import Enrollment from '@/models/Enrollment';
 import { createCourseSchema } from '@/lib/validations';
-import { apiError, apiSuccess, getPagination, zodMessage} from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage, getPagination } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // GET /api/courses — list all active courses with enrollment status for the current user

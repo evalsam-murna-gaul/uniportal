@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import { forgotPasswordSchema } from '@/lib/validations';
-import { apiError, apiSuccess, generateToken } from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage, generateToken } from '@/lib/utils';
 
 // In production, store tokens in DB or Redis with expiry
 // and send via an email provider (Resend, Nodemailer, etc.)
@@ -14,9 +14,7 @@ export async function POST(req: NextRequest) {
 
     const parsed = forgotPasswordSchema.safeParse(body);
     if (!parsed.success) {
-      // Fix: Access the first error message properly
-      const firstError = parsed.error.issues[0]?.message || 'Validation failed';
-      return apiError(firstError, 400);
+      return apiError(zodMessage(parsed.error), 400);
     }
 
     const { email } = parsed.data;

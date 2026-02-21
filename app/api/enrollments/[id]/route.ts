@@ -12,7 +12,8 @@ const updateSchema = z.object({
 });
 
 // PUT /api/enrollments/[id] — Admin: approve or reject an enrollment
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'admin') return apiError('Forbidden', 403);
@@ -24,7 +25,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await connectDB();
 
     const enrollment = await Enrollment.findByIdAndUpdate(
-      params.id,
+      id,
       { status: parsed.data.status },
       { new: true }
     )
@@ -37,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       actorId: session.user.id,
       action: parsed.data.status === 'approved' ? 'APPROVE_ENROLLMENT' : 'REJECT_ENROLLMENT',
       resource: 'Enrollment',
-      resourceId: params.id,
+      resourceId: id,
       metadata: {
         student: (enrollment.student as { name: string }).name,
         course: (enrollment.course as { code: string }).code,

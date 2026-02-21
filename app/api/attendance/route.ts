@@ -5,7 +5,7 @@ import { connectDB } from '@/lib/db';
 import Attendance from '@/models/Attendance';
 import Course from '@/models/Course';
 import { markAttendanceSchema } from '@/lib/validations';
-import { apiError, apiSuccess, getPagination } from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage, getPagination } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // GET /api/attendance — Faculty: own courses. Admin: all.
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = markAttendanceSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.errors[0].message, 400);
+    if (!parsed.success) return apiError(zodMessage(parsed.error), 400);
 
     const { course: courseId, date, records } = parsed.data;
 

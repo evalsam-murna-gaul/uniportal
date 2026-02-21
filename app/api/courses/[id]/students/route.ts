@@ -7,14 +7,15 @@ import Enrollment from '@/models/Enrollment';
 import { apiError, apiSuccess } from '@/lib/utils';
 
 // GET /api/courses/[id]/students — Faculty (own course) or Admin
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   try {
     const session = await getServerSession(authOptions);
     if (!session) return apiError('Unauthorized', 401);
 
     await connectDB();
 
-    const course = await Course.findById(params.id).lean();
+    const course = await Course.findById(id).lean();
     if (!course) return apiError('Course not found', 404);
 
     // Faculty can only view students for their own courses
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     const enrollments = await Enrollment.find({
-      course: params.id,
+      course: id,
       status: { $in: ['approved', 'pending'] },
     })
       .populate('student', 'name email studentId department avatar')

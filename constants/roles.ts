@@ -5,6 +5,7 @@ export const ROLES = {
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
+export type GradeType = (typeof GRADE_TYPE)[keyof typeof GRADE_TYPE];
 
 export const ENROLLMENT_STATUS = {
   PENDING: 'pending',

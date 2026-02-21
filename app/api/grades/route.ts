@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import Grade from '@/models/Grade';
 import { createGradeSchema } from '@/lib/validations';
-import { apiError, apiSuccess, calculateGPA } from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage, calculateGPA } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // GET /api/grades — Student: own grades. Faculty/Admin: filter by course/student
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = createGradeSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.errors[0].message, 400);
+    if (!parsed.success) return apiError(zodMessage(parsed.error), 400);
 
     if (parsed.data.score > parsed.data.maxScore) {
       return apiError('Score cannot exceed max score', 400);
