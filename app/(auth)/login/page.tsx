@@ -1,5 +1,21 @@
-'use client';
 
+
+import { Suspense } from 'react';
+import LoginForm from '@/components/auth/LoginForm';
+
+export const metadata = { title: 'Sign In — UniPortal' };
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+
+/*
+'use client'
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -111,4 +127,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+}*/

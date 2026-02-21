@@ -5,7 +5,7 @@ import { connectDB } from '@/lib/db';
 import Course from '@/models/Course';
 import Enrollment from '@/models/Enrollment';
 import { createCourseSchema } from '@/lib/validations';
-import { apiError, apiSuccess, getPagination } from '@/lib/utils';
+import { apiError, apiSuccess, getPagination, zodMessage} from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // GET /api/courses — list all active courses with enrollment status for the current user
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = createCourseSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.errors[0].message, 400);
+    if (!parsed.success) return apiError(zodMessage(parsed.error), 400);
 
     await connectDB();
 

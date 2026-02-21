@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import Announcement from '@/models/Announcements';
 import { createAnnouncementSchema } from '@/lib/validations';
-import { apiError, apiSuccess, getPagination } from '@/lib/utils';
+import { apiError, apiSuccess, zodMessage, getPagination } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
 // GET /api/announcements — All authenticated users: get announcements targeted to their role
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const parsed = createAnnouncementSchema.safeParse(body);
-    if (!parsed.success) return apiError(parsed.error.errors[0].message, 400);
+    if (!parsed.success) return apiError(zodMessage(parsed.error), 400);
 
     await connectDB();
 
