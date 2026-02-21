@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import User from '@/models/User';
 import bcrypt from 'bcryptjs';
@@ -8,24 +6,17 @@ import { registerSchema } from '@/lib/validations';
 import { apiError, apiSuccess, zodMessage } from '@/lib/utils';
 import { audit } from '@/lib/audit';
 
-// Validates that the caller has the right to register a given role:
-// - 'student'  → always allowed (open registration)
-// - 'faculty'  → valid FACULTY_REGISTER_TOKEN header, OR admin session, OR x-admin-create header with admin session
-// - 'admin'    → valid ADMIN_REGISTER_TOKEN header, OR admin session
-async function canRegisterRole(
-  role: string,
-  req: NextRequest
-): Promise<boolean> {
+function isAuthorised(role: string, req: NextRequest): boolean {
+  // Students — always open
   if (role === 'student') return true;
 
-  // Check if an active admin session is making this request (from UserFormModal)
-  const isAdminCreate = req.headers.get('x-admin-create') === 'true';
-  if (isAdminCreate) {
-    const session = await getServerSession(authOptions);
-    if (session?.user?.role === 'admin') return true;
-  }
+  // Admin dashboard creating any role — verified by a server-only admin secret
+  // This secret is never exposed to the browser, only sent server-to-server
+  const adminSecret = req.headers.get('x-admin-secret');
+  const expectedSecret = process.env.ADMIN_API_SECRET;
+  if (expectedSecret && adminSecret === expectedSecret) return true;
 
-  // Check role-specific registration token (from self-registration pages)
+  // Self-registration via token-protected URL
   const token = req.headers.get('x-register-token');
   if (role === 'faculty') {
     const expected = process.env.FACULTY_REGISTER_TOKEN;
@@ -45,15 +36,12 @@ export async function POST(req: NextRequest) {
 
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
-      const message = zodMessage(parsed.error);
-      return apiError(message, 400);
+      return apiError(zodMessage(parsed.error), 400);
     }
 
     const { name, email, password, role, department, studentId, employeeId, phone } = parsed.data;
 
-    // Enforce role authorisation — cannot be bypassed
-    const allowed = await canRegisterRole(role, req);
-    if (!allowed) {
+    if (!isAuthorised(role, req)) {
       return apiError('You are not authorised to register with this role', 403);
     }
 
@@ -74,10 +62,10 @@ export async function POST(req: NextRequest) {
       email,
       passwordHash,
       role,
-      ...(department && { department }),
-      ...(phone && { phone }),
-      ...(studentId && { studentId }),
-      ...(employeeId && { employeeId }),
+      ...(department ? { department } : {}),
+      ...(phone ? { phone } : {}),
+      ...(studentId ? { studentId } : {}),
+      ...(employeeId ? { employeeId } : {}),
     });
 
     audit({
