@@ -36,9 +36,9 @@ export default function LoginForm() {
     const session = await sessionRes.json();
     const role = session?.user?.role;
 
-    if (role === 'admin') router.push('/admin/dashboard');
-    else if (role === 'faculty') router.push('/faculty/dashboard');
-    else router.push('/student/dashboard');
+    if (role === 'admin') window.location.href = '/admin/dashboard';
+    else if (role === 'faculty') window.location.href = '/faculty/dashboard';
+    else window.location.href = '/student/dashboard';
   }
 
   return (
