@@ -1,5 +1,5 @@
 import mongoose, { Schema, model, models } from 'mongoose';
-import { ROLES } from '../constants/roles';
+import { ROLES } from '@/constants/roles';
 
 const UserSchema = new Schema(
   {
@@ -33,15 +33,17 @@ const UserSchema = new Schema(
     },
     studentId: {
       type: String,
-      default: null,
+      trim: true,
       sparse: true,
       unique: true,
+      default: undefined,
     },
     employeeId: {
       type: String,
-      default: null,
+      trim: true,
       sparse: true,
       unique: true,
+      default: undefined,
     },
     phone: {
       type: String,
@@ -61,7 +63,6 @@ const UserSchema = new Schema(
 );
 
 // Index for fast lookups
-
 UserSchema.index({ role: 1 });
 UserSchema.index({ department: 1 });
 
