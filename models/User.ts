@@ -61,7 +61,7 @@ const UserSchema = new Schema(
 );
 
 // Index for fast lookups
-UserSchema.index({ email: 1 });
+
 UserSchema.index({ role: 1 });
 UserSchema.index({ department: 1 });
 
